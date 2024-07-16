@@ -2,7 +2,9 @@ import requests
 import customtkinter as ctk
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from matplotlib import dates as mdates
 import asyncio
+import mplcursors
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -10,7 +12,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 class MainWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.after(201, lambda: self.iconbitmap('scr/icon.ico'))
+        self.after(201, lambda: self.iconbitmap('src/icon.ico'))
         self.title('Crypto Currency')
         self.geometry('1000x600')
 
@@ -30,31 +32,42 @@ class MainWindow(ctk.CTk):
         main_frame = ctk.CTkFrame(self)
         main_frame.pack(expand=True, fill='both')
 
-        main_frame.columnconfigure(0, weight=1)  # Список монет
-        main_frame.columnconfigure(1, weight=2)  # Інформація про монету та графік
+        main_frame.columnconfigure(0, weight=1)  # Список монет (1/5 екрану)
+        main_frame.columnconfigure(1, weight=4)  # Інформація про монету та графік (4/5 екрану)
         main_frame.rowconfigure(1, weight=1)
 
         font = ("Roboto", 16, "bold")
 
         # Top info labels
         self.global_market_info_label = ctk.CTkLabel(main_frame, text='Total market volume: volume$', font=font)
-        self.global_market_info_label.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        self.global_market_info_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky='w')
 
         self.global_market_cap_label = ctk.CTkLabel(main_frame, text='Global market cap: cap$', font=font)
-        self.global_market_cap_label.grid(row=0, column=1, padx=10, pady=10, sticky='w')
+        self.global_market_cap_label.grid(row=0, column=1, padx=10, pady=10, sticky='e')
 
-        # Coins list (1/3 of the screen)
-        coins_list_container = ctk.CTkFrame(main_frame)
+        # Coins list (1/5 of the screen)
+        coins_list_container = ctk.CTkFrame(main_frame, width=200)  # Set a fixed width
         coins_list_container.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+        coins_list_container.grid_propagate(False)  # Prevent the frame from shrinking
         coins_list_container.columnconfigure(0, weight=1)
-        coins_list_container.rowconfigure(1, weight=1)
+        coins_list_container.rowconfigure(2, weight=1)  # Update this to 2 to accommodate the search field
 
-        ctk.CTkLabel(coins_list_container, text='Coins List', font=font).grid(row=0, column=0, pady=5, sticky='w')
+        # Add search functionality
+        search_frame = ctk.CTkFrame(coins_list_container)
+        search_frame.grid(row=0, column=0, pady=(5, 0), sticky='ew')
+        search_frame.columnconfigure(0, weight=1)
 
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search coins...")
+        self.search_entry.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
+        self.search_entry.bind('<KeyRelease>', self.filter_coins)
+
+
+        # Update the row for the coins_list_frame
         self.coins_list_frame = ctk.CTkScrollableFrame(coins_list_container)
-        self.coins_list_frame.grid(row=1, column=0, sticky='nsew')
+        self.coins_list_frame.grid(row=2, column=0, sticky='nsew')
+        self.coins_list_frame.grid_columnconfigure((0, 1), weight=1, uniform="column")
 
-        # Right side container (2/3 of the screen)
+        # Right side container (4/5 of the screen)
         right_container = ctk.CTkFrame(main_frame)
         right_container.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
         right_container.columnconfigure(0, weight=1)
@@ -65,8 +78,10 @@ class MainWindow(ctk.CTk):
         coin_info_frame.grid(row=0, column=0, padx=10, pady=10, sticky='ew')
         coin_info_frame.columnconfigure(0, weight=1)
 
-        self.coin_name_label = ctk.CTkLabel(coin_info_frame, text='Coin (24H)', font=font)
-        self.coin_name_label.grid(row=0, column=0, pady=5, sticky='w')
+        self.coin_name_label = ctk.CTkLabel(coin_info_frame, text='Coin (24H)',
+                                            font=("Roboto", 18, "bold"),
+                                            anchor='center')
+        self.coin_name_label.grid(row=0, column=0, pady=(5, 10), sticky='ew')
 
         self.current_price_label = ctk.CTkLabel(coin_info_frame, text='Price $', font=font)
         self.current_price_label.grid(row=1, column=0, pady=5, sticky='w')
@@ -93,9 +108,9 @@ class MainWindow(ctk.CTk):
         time_span_frame.grid(row=2, column=0, padx=10, pady=10, sticky='ew')
         time_span_frame.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
 
-        self.btn_timespan_today = ctk.CTkButton(time_span_frame, text='24H',
+        self.btn_timespan_24H = ctk.CTkButton(time_span_frame, text='24H',
                                                 command=lambda: self.get_data_and_plot('1'), width=50, height=30)
-        self.btn_timespan_today.grid(row=0, column=0, padx=5)
+        self.btn_timespan_24H.grid(row=0, column=0, padx=5)
 
         self.btn_timespan_7_days = ctk.CTkButton(time_span_frame, text='7D',
                                                  command=lambda: self.get_data_and_plot('7'), width=50, height=30)
@@ -116,6 +131,57 @@ class MainWindow(ctk.CTk):
         self.btn_timespan_all_time = ctk.CTkButton(time_span_frame, text='All',
                                                    command=lambda: self.get_data_and_plot('max'), width=50, height=30)
         self.btn_timespan_all_time.grid(row=0, column=5, padx=5)
+
+    def filter_coins(self, event):
+        search_term = self.search_entry.get().lower()
+        for widget in self.coins_list_frame.winfo_children():
+            widget.destroy()
+
+        filtered_coins = [coin for coin in self.coins_data if
+                          search_term in coin.get('name', '').lower() or search_term in coin.get('symbol', '').lower()]
+
+        for index, coin in enumerate(filtered_coins):
+            self.create_coin_widget(coin, index)
+
+    def create_coin_widget(self, coin, index):
+        column = index % 2
+        row = index // 2
+
+        frame = ctk.CTkFrame(self.coins_list_frame)
+        frame.grid(row=row, column=column, pady=5, padx=5, sticky='nsew')
+        frame.grid_columnconfigure(0, weight=1)
+
+        name_frame = ctk.CTkFrame(frame)
+        name_frame.grid(row=0, column=0, pady=(5, 0), sticky='ew')
+        name_frame.grid_columnconfigure(0, weight=1)
+
+        coin_label = ctk.CTkLabel(name_frame, text=coin.get('name', 'N/A'), font=("Roboto", 14, "bold"))
+        coin_label.grid(row=0, column=0, padx=5, pady=(0, 5), sticky='ew')
+        coin_label.bind('<Button-1>', lambda e, c=coin.get('id'): self.set_currency(c))
+        coin_label.bind('<Enter>', lambda e: e.widget.config(cursor='hand2'))
+        coin_label.bind('<Leave>', lambda e: e.widget.config(cursor=''))
+
+        info_frame = ctk.CTkFrame(frame)
+        info_frame.grid(row=1, column=0, sticky='ew')
+        info_frame.grid_columnconfigure((0, 1), weight=1)
+
+        price_label = ctk.CTkLabel(info_frame, text=f"${coin.get('current_price', 0):,}", font=("Roboto", 12))
+        price_label.grid(row=0, column=0, padx=5, sticky='w')
+        price_label.bind('<Button-1>', lambda e, c=coin.get('id'): self.set_currency(c))
+        price_label.bind('<Enter>', lambda e: e.widget.config(cursor='hand2'))
+        price_label.bind('<Leave>', lambda e: e.widget.config(cursor=''))
+
+        change_percentage = coin.get('price_change_percentage_24h', 0)
+        change_label = ctk.CTkLabel(info_frame, text=f"{change_percentage:.2f}%", font=("Roboto", 12))
+        change_label.grid(row=0, column=1, padx=5, sticky='e')
+        change_label.bind('<Button-1>', lambda e, c=coin.get('id'): self.set_currency(c))
+        change_label.bind('<Enter>', lambda e: e.widget.config(cursor='hand2'))
+        change_label.bind('<Leave>', lambda e: e.widget.config(cursor=''))
+
+        if change_percentage >= 0:
+            change_label.configure(text_color="green")
+        else:
+            change_label.configure(text_color="red")
 
     def update_coin_info(self, time_period):
         self.coin_name_label.configure(text=f'{self.current_currency.capitalize()} ({time_period})')
@@ -173,11 +239,30 @@ class MainWindow(ctk.CTk):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         x, y = self.data_plot()
-        ax.plot(x, y, label=self.current_currency.capitalize())
-        ax.fill_between(x, y, alpha=.1)
-        ax.yaxis.set_major_formatter('${x:1.0f}')
+
+        # Налаштування графіка
+        ax.plot(x, y, label=self.current_currency.capitalize(), color='#1E69A4')
+        ax.fill_between(x, y, color='#00BFFF', alpha=0.1)
+
+        # Фон та кольори осей і значень
+        self.figure.patch.set_facecolor('#333333')  # Фон для всього графіка
+        ax.set_facecolor('#333333')  # Фон для області графіка
+        ax.spines['bottom'].set_color('#FFFFFF')  # Колір нижньої осі
+        ax.spines['left'].set_color('#FFFFFF')  # Колір лівої осі
+        ax.spines['top'].set_visible(False)  # Приховати верхню вісь
+        ax.spines['right'].set_visible(False)  # Приховати праву вісь
+        ax.tick_params(axis='x', colors='#FFFFFF')  # Колір значень на осі X
+        ax.tick_params(axis='y', colors='#FFFFFF')  # Колір значень на осі Y
+
+        # Додавання курсорів для показу значень
+        cursor = mplcursors.cursor(ax, hover=True)
+        cursor.connect("add", lambda sel: self.configure_annotation(sel))
+
+        ax.yaxis.set_major_formatter('${x:1.2f}')
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        ax.figure.canvas.mpl_connect('axes_leave_event', lambda event: self.remove_annotation() if hasattr(self,
+                                                                                                           'current_annotation') else None)
         ax.legend()
-        ax.grid()
         self.canvas.draw()
 
         if len(y) > 1:
@@ -193,6 +278,19 @@ class MainWindow(ctk.CTk):
 
         if hasattr(self, 'total_volume'):
             self.total_volume_label.configure(text=f'Total volume: ${self.total_volume:,.2f}')
+
+    def configure_annotation(self, sel):
+        self.current_annotation = sel.annotation  # Зберігаємо поточну анотацію
+        self.current_annotation.set_text(
+            f'Date: {mdates.num2date(sel.target[0]).strftime("%Y-%m-%d %H:%M:%S")}\nPrice: ${sel.target[1]:,.2f}')
+        self.current_annotation.set_backgroundcolor('#2B2B2B')  # Змінюємо колір фону анотації
+        self.current_annotation.set_color('#FFFFFF')  # Змінюємо колір тексту анотації
+        sel.annotation.draggable(True)  # Дозволяємо перетягування анотації
+        sel.annotation.set_visible(True)  # Робимо анотацію видимою
+
+    def remove_annotation(self):
+        if hasattr(self, 'current_annotation'):
+            self.current_annotation.set_visible(False)
 
     def get_data_and_plot(self, timespan):
         loop = asyncio.get_event_loop()
@@ -238,55 +336,15 @@ class MainWindow(ctk.CTk):
 
     def update_coin_list(self):
         url = 'https://api.coingecko.com/api/v3/coins/markets'
-        params = {'vs_currency': 'usd'}
+        params = {'vs_currency': 'usd', 'order': 'market_cap_desc', 'per_page': 100, 'page': 1}
         response = requests.get(url, params=params)
         self.coins_data = response.json()
 
-        print(f"API Response: {self.coins_data}")  # Debug print
+        for widget in self.coins_list_frame.winfo_children():
+            widget.destroy()
 
-        if not isinstance(self.coins_data, list):
-            print(f"Unexpected response format. Expected a list, got {type(self.coins_data)}")
-            return
-
-        row = 1
-        for coin in self.coins_data:
-            if not isinstance(coin, dict):
-                print(f"Unexpected coin format. Expected a dict, got {type(coin)}")
-                continue
-
-            try:
-                frame = ctk.CTkFrame(self.coins_list_frame)
-                frame.grid(row=row, column=0, pady=5, sticky='ew')
-                frame.bind('<Button-1>', lambda e, c=coin.get('id'): self.set_currency(c))
-
-                coin_label = ctk.CTkLabel(frame, text=coin.get('name', 'N/A'), font=("Roboto", 14, "bold"))
-                coin_label.pack(side=ctk.LEFT, padx=5)
-                coin_label.bind('<Button-1>', lambda e, c=coin.get('id'): self.set_currency(c))
-                coin_label.bind('<Enter>', lambda e: e.widget.config(cursor='hand2'))
-                coin_label.bind('<Leave>', lambda e: e.widget.config(cursor=''))
-
-                price_label = ctk.CTkLabel(frame, text=f"${coin.get('current_price', 0):,}", font=("Roboto", 14))
-                price_label.pack(side=ctk.LEFT, padx=5)
-                price_label.bind('<Button-1>', lambda e, c=coin.get('id'): self.set_currency(c))
-                price_label.bind('<Enter>', lambda e: e.widget.config(cursor='hand2'))
-                price_label.bind('<Leave>', lambda e: e.widget.config(cursor=''))
-
-                change_percentage = coin.get('price_change_percentage_24h', 0)
-                change_label = ctk.CTkLabel(frame, text=f"{change_percentage:.2f}%", font=("Roboto", 14))
-                change_label.pack(side=ctk.LEFT, padx=5)
-                change_label.bind('<Button-1>', lambda e, c=coin.get('id'): self.set_currency(c))
-                change_label.bind('<Enter>', lambda e: e.widget.config(cursor='hand2'))
-                change_label.bind('<Leave>', lambda e: e.widget.config(cursor=''))
-
-                if change_percentage >= 0:
-                    change_label.configure(text_color="green")
-                else:
-                    change_label.configure(text_color="red")
-
-                row += 1
-            except Exception as e:
-                print(f"Error processing coin: {e}")
-                continue
+        for index, coin in enumerate(self.coins_data):
+            self.create_coin_widget(coin, index)
 
     def show_error_message(self, message="Server is overloaded. Try again later."):
         error_window = ctk.CTkToplevel(self)
