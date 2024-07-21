@@ -7,6 +7,7 @@ import asyncio
 import mplcursors
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PIL import Image
 
 
 class MainWindow(ctk.CTk):
@@ -18,12 +19,20 @@ class MainWindow(ctk.CTk):
 
         self.current_currency = 'bitcoin'
 
+        self.x_icon = ctk.CTkImage(Image.open("src/x.png"), size=(20, 20))
+        self.facebook_icon = ctk.CTkImage(Image.open("src/facebook.png"), size=(20, 20))
+        self.reddit_icon = ctk.CTkImage(Image.open("src/reddit.png"), size=(20, 20))
+
         self.init_main()
 
         # Update market info and plot data on startup
         self.update_global_market_info()
         self.update_coin_list()
         self.update_price()
+        self.update_social_links()
+        self.update_brief_description()
+
+        GITHUB_REPO_URL = "https://github.com/#/#"
 
         # Use after method to ensure UI is fully initialized before plotting
         self.after(100, lambda: self.get_data_and_plot('1'))
@@ -32,8 +41,8 @@ class MainWindow(ctk.CTk):
         main_frame = ctk.CTkFrame(self)
         main_frame.pack(expand=True, fill='both')
 
-        main_frame.columnconfigure(0, weight=1)  # Список монет (1/5 екрану)
-        main_frame.columnconfigure(1, weight=4)  # Інформація про монету та графік (4/5 екрану)
+        main_frame.columnconfigure(0, weight=1)  # Coins list (1/5 of the screen)
+        main_frame.columnconfigure(1, weight=4)  # Information about the coin and graph (4/5 of the screen)
         main_frame.rowconfigure(1, weight=1)
 
         font = ("Roboto", 16, "bold")
@@ -46,13 +55,13 @@ class MainWindow(ctk.CTk):
         self.global_market_cap_label.grid(row=0, column=1, padx=10, pady=10, sticky='e')
 
         # Coins list (1/5 of the screen)
-        coins_list_container = ctk.CTkFrame(main_frame, width=200)  # Set a fixed width
+        coins_list_container = ctk.CTkFrame(main_frame, width=200)
         coins_list_container.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
         coins_list_container.grid_propagate(False)  # Prevent the frame from shrinking
         coins_list_container.columnconfigure(0, weight=1)
-        coins_list_container.rowconfigure(2, weight=1)  # Update this to 2 to accommodate the search field
+        coins_list_container.rowconfigure(2, weight=1)
 
-        # Add search functionality
+        # Search
         search_frame = ctk.CTkFrame(coins_list_container)
         search_frame.grid(row=0, column=0, pady=(5, 0), sticky='ew')
         search_frame.columnconfigure(0, weight=1)
@@ -61,8 +70,6 @@ class MainWindow(ctk.CTk):
         self.search_entry.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
         self.search_entry.bind('<KeyRelease>', self.filter_coins)
 
-
-        # Update the row for the coins_list_frame
         self.coins_list_frame = ctk.CTkScrollableFrame(coins_list_container)
         self.coins_list_frame.grid(row=2, column=0, sticky='nsew')
         self.coins_list_frame.grid_columnconfigure((0, 1), weight=1, uniform="column")
@@ -78,19 +85,74 @@ class MainWindow(ctk.CTk):
         coin_info_frame.grid(row=0, column=0, padx=10, pady=10, sticky='ew')
         coin_info_frame.columnconfigure(0, weight=1)
 
-        self.coin_name_label = ctk.CTkLabel(coin_info_frame, text='Coin (24H)',
-                                            font=("Roboto", 18, "bold"),
-                                            anchor='center')
-        self.coin_name_label.grid(row=0, column=0, pady=(5, 10), sticky='ew')
+        # Single frame for all coin information
+        coin_info_row = ctk.CTkFrame(coin_info_frame, fg_color="#2B2B2B")
+        coin_info_row.grid(row=0, column=0, pady=(5, 10), sticky='ew')
+        coin_info_row.columnconfigure(0, weight=1)
 
-        self.current_price_label = ctk.CTkLabel(coin_info_frame, text='Price $', font=font)
-        self.current_price_label.grid(row=1, column=0, pady=5, sticky='w')
+        # Coin name, rank, volume, price and percantage(top row)
+        top_info_frame = ctk.CTkFrame(coin_info_row, fg_color="#2B2B2B")
+        top_info_frame.grid(row=0, column=0, sticky='ew')
+        top_info_frame.columnconfigure(0, weight=1)
+        top_info_frame.columnconfigure(1, weight=0)
 
-        self.price_percentage_label = ctk.CTkLabel(coin_info_frame, text='percentage%', font=font)
-        self.price_percentage_label.grid(row=2, column=0, pady=5, sticky='w')
+        # Left side of top row (name, rank, volume)
+        name_rank_volume_frame = ctk.CTkFrame(top_info_frame, fg_color="#2B2B2B")
+        name_rank_volume_frame.grid(row=0, column=0, sticky='w')
+        name_rank_volume_frame.columnconfigure(0, weight=1)
+        name_rank_volume_frame.columnconfigure(1, weight=0)
 
-        self.total_volume_label = ctk.CTkLabel(coin_info_frame, text='Total volume: N/A', font=font)
-        self.total_volume_label.grid(row=3, column=0, pady=5, sticky='w')
+        self.coin_name_label = ctk.CTkLabel(name_rank_volume_frame, text='ZXC', font=("Roboto", 24, "bold"))
+        self.coin_name_label.grid(row=0, column=0, pady=(5, 5), padx=(10, 5), sticky='w')
+
+        self.coin_rank_label = ctk.CTkLabel(name_rank_volume_frame, text='#1', font=("Roboto", 16),
+                                            text_color="#808080")
+        self.coin_rank_label.grid(row=0, column=1, pady=(7, 5), padx=(0, 10), sticky='e')
+
+        self.total_volume_label = ctk.CTkLabel(name_rank_volume_frame, text='Total volume: N/A', font=("Roboto", 14))
+        self.total_volume_label.grid(row=1, column=0, columnspan=2, pady=(0, 5), padx=(10, 5), sticky='w')
+
+        # Right side of top row (price and percentage)
+        price_percentage_frame = ctk.CTkFrame(top_info_frame, fg_color="#2B2B2B")
+        price_percentage_frame.grid(row=0, column=1, pady=(5, 5), sticky='e')
+
+        self.current_price_label = ctk.CTkLabel(price_percentage_frame, text='$64000', font=("Roboto", 20, "bold"))
+        self.current_price_label.grid(row=0, column=0, pady=(5, 5), padx=(0, 5), sticky='e')
+
+        self.price_percentage_label = ctk.CTkLabel(price_percentage_frame, text='1.55%', font=("Roboto", 18))
+        self.price_percentage_label.grid(row=0, column=1, padx=(0, 10), sticky='e')
+
+        # Frame for description and High/Low
+        description_high_low_frame = ctk.CTkFrame(coin_info_row, fg_color="#2B2B2B")
+        description_high_low_frame.grid(row=1, column=0, sticky='ew')
+        description_high_low_frame.columnconfigure(0, weight=1)
+        description_high_low_frame.columnconfigure(1, weight=0)
+
+        # Description
+        self.brief_description_label = ctk.CTkLabel(description_high_low_frame, text='', font=("Roboto", 12),
+                                                    wraplength=700, justify='left', anchor='w')
+        self.brief_description_label.grid(row=0, column=0, sticky='w', padx=(10, 5), pady=5)
+
+        # High/Low frame
+        self.high_low_frame = ctk.CTkFrame(description_high_low_frame, fg_color="#333333")
+        self.high_low_frame.grid(row=0, column=1, pady=5, padx=(5, 10), sticky='e')
+
+        # High/Low title
+        self.high_low_title = ctk.CTkLabel(self.high_low_frame, text='High/Low', font=("Roboto", 16, "bold"),
+                                           text_color="white")
+        self.high_low_title.grid(row=0, column=0, padx=(40, 40), pady=(5, 0))
+
+        # High label
+        self.high_label = ctk.CTkLabel(self.high_low_frame, text='N/A', font=("Roboto", 14))
+        self.high_label.grid(row=1, column=0, padx=10, pady=(5, 0))
+
+        # Low label
+        self.low_label = ctk.CTkLabel(self.high_low_frame, text='N/A', font=("Roboto", 14))
+        self.low_label.grid(row=2, column=0, padx=10, pady=(0, 5))
+
+        # Social Frame
+        self.social_frame = ctk.CTkFrame(coin_info_row, fg_color="#2B2B2B")
+        self.social_frame.grid(row=2, column=0, pady=5, padx=(5,0), sticky='w')
 
         # Graph plot area
         graph_frame = ctk.CTkFrame(right_container)
@@ -103,34 +165,62 @@ class MainWindow(ctk.CTk):
         self.canvas.draw()
         self.canvas.get_tk_widget().grid(row=0, column=0, sticky='nsew')
 
-        # Time span buttons
-        time_span_frame = ctk.CTkFrame(right_container)
+        self.github_icon = ctk.CTkImage(Image.open("src/github.png"), size=(20, 20))
+
+        # Time span frame
+        time_span_frame = ctk.CTkFrame(right_container, fg_color="transparent")
         time_span_frame.grid(row=2, column=0, padx=10, pady=10, sticky='ew')
-        time_span_frame.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
+        time_span_frame.columnconfigure(1, weight=1)
 
-        self.btn_timespan_24H = ctk.CTkButton(time_span_frame, text='24H',
-                                                command=lambda: self.get_data_and_plot('1'), width=50, height=30)
-        self.btn_timespan_24H.grid(row=0, column=0, padx=5)
+        # GitHub
+        github_frame = ctk.CTkFrame(time_span_frame, fg_color="transparent")
+        github_frame.grid(row=0, column=0, padx=(90, 0), sticky='w')
 
-        self.btn_timespan_7_days = ctk.CTkButton(time_span_frame, text='7D',
-                                                 command=lambda: self.get_data_and_plot('7'), width=50, height=30)
-        self.btn_timespan_7_days.grid(row=0, column=1, padx=5)
+        github_icon_label = ctk.CTkLabel(github_frame, image=self.github_icon, text="")
+        github_icon_label.pack(side='left', padx=(0, 5))
 
-        self.btn_timespan_30_days = ctk.CTkButton(time_span_frame, text='30D',
-                                                  command=lambda: self.get_data_and_plot('30'), width=50, height=30)
-        self.btn_timespan_30_days.grid(row=0, column=2, padx=5)
+        github_text_label = ctk.CTkLabel(github_frame, text="GitHub", font=("Roboto", 12), cursor="hand2")
+        github_text_label.pack(side='left')
 
-        self.btn_timespan_90_days = ctk.CTkButton(time_span_frame, text='90D',
-                                                  command=lambda: self.get_data_and_plot('90'), width=50, height=30)
-        self.btn_timespan_90_days.grid(row=0, column=3, padx=5)
+        # Clicable label
+        github_icon_label.bind("<Button-1>", self.open_github)
+        github_text_label.bind("<Button-1>", self.open_github)
 
-        self.btn_timespan_1_year = ctk.CTkButton(time_span_frame, text='1Y',
-                                                 command=lambda: self.get_data_and_plot('365'), width=50, height=30)
-        self.btn_timespan_1_year.grid(row=0, column=4, padx=5)
+        # Time span buttons
+        button_frame = ctk.CTkFrame(time_span_frame, fg_color="transparent")
+        button_frame.grid(row=0, column=1, sticky='e', padx=(0, 113))
 
-        self.btn_timespan_all_time = ctk.CTkButton(time_span_frame, text='All',
-                                                   command=lambda: self.get_data_and_plot('max'), width=50, height=30)
-        self.btn_timespan_all_time.grid(row=0, column=5, padx=5)
+        button_width = 50
+        button_height = 30
+
+        self.btn_timespan_24H = ctk.CTkButton(button_frame, text='24H', command=lambda: self.get_data_and_plot('1'),
+                                              width=button_width, height=button_height, corner_radius=0)
+        self.btn_timespan_24H.grid(row=0, column=0)
+
+        self.btn_timespan_7_days = ctk.CTkButton(button_frame, text='7D',
+                                                 command=lambda: self.get_data_and_plot('7'),
+                                                 width=button_width, height=button_height, corner_radius=0)
+        self.btn_timespan_7_days.grid(row=0, column=1)
+
+        self.btn_timespan_30_days = ctk.CTkButton(button_frame, text='30D',
+                                                  command=lambda: self.get_data_and_plot('30'),
+                                                  width=button_width, height=button_height, corner_radius=0)
+        self.btn_timespan_30_days.grid(row=0, column=2)
+
+        self.btn_timespan_90_days = ctk.CTkButton(button_frame, text='90D',
+                                                  command=lambda: self.get_data_and_plot('90'),
+                                                  width=button_width, height=button_height, corner_radius=0)
+        self.btn_timespan_90_days.grid(row=0, column=3)
+
+        self.btn_timespan_1_year = ctk.CTkButton(button_frame, text='1Y',
+                                                 command=lambda: self.get_data_and_plot('365'),
+                                                 width=button_width, height=button_height, corner_radius=0)
+        self.btn_timespan_1_year.grid(row=0, column=4)
+
+        self.btn_timespan_all_time = ctk.CTkButton(button_frame, text='All',
+                                                   command=lambda: self.get_data_and_plot('max'),
+                                                   width=button_width, height=button_height, corner_radius=0)
+        self.btn_timespan_all_time.grid(row=0, column=5)
 
     def filter_coins(self, event):
         search_term = self.search_entry.get().lower()
@@ -161,6 +251,10 @@ class MainWindow(ctk.CTk):
         coin_label.bind('<Enter>', lambda e: e.widget.config(cursor='hand2'))
         coin_label.bind('<Leave>', lambda e: e.widget.config(cursor=''))
 
+        rank_label = ctk.CTkLabel(name_frame, text=f'#{coin.get("market_cap_rank", "N/A")}', font=("Roboto", 10),
+                                  text_color="#808080")
+        rank_label.grid(row=0, column=1, padx=5, pady=(0, 5), sticky='e')
+
         info_frame = ctk.CTkFrame(frame)
         info_frame.grid(row=1, column=0, sticky='ew')
         info_frame.grid_columnconfigure((0, 1), weight=1)
@@ -190,7 +284,25 @@ class MainWindow(ctk.CTk):
         self.current_currency = currency
         self.update_coin_info('24H')  # Default to 24H when changing currency
         self.update_price()
+        self.update_coin_rank()
+        self.update_social_links()
+        self.update_brief_description()
         self.get_data_and_plot('1')  # Update graph with default timespan
+
+    def update_brief_description(self):
+        coin_info = self.get_coin_info()
+        description = coin_info['description']
+        if description and description.strip() != '':
+            # Split the description into paragraphs
+            paragraphs = description.split('\n\n')
+            # Get the first paragraph
+            first_paragraph = paragraphs[0]
+            # Truncate if it's too long
+            if len(first_paragraph) > 350:
+                first_paragraph = first_paragraph[:347] + '...'
+            self.brief_description_label.configure(text=first_paragraph)
+        else:
+            self.brief_description_label.configure(text='No description available')
 
     def get_price(self):
         url = 'https://api.coingecko.com/api/v3/simple/price'
@@ -209,6 +321,13 @@ class MainWindow(ctk.CTk):
         price_today = self.get_price()
         self.current_price_label.configure(text='$' + price_today)
 
+    def update_coin_rank(self):
+        for coin in self.coins_data:
+            if coin['id'] == self.current_currency:
+                rank = coin.get('market_cap_rank', 'N/A')
+                self.coin_rank_label.configure(text=f'#{rank}')
+                break
+
     def get_data_plot(self, timespan):
         url = f'https://api.coingecko.com/api/v3/coins/{self.current_currency}/market_chart'
         params = {'vs_currency': 'usd', 'days': timespan}
@@ -226,6 +345,51 @@ class MainWindow(ctk.CTk):
         else:
             self.total_volume = 'N/A'
 
+        # High/Low calculation
+        prices = [price[1] for price in self.data['prices']]
+        self.highest_price = max(prices)
+        self.lowest_price = min(prices)
+
+    def get_coin_info(self):
+        url = f'https://api.coingecko.com/api/v3/coins/{self.current_currency}'
+        response = requests.get(url)
+        coin_data = response.json()
+        return {
+            'description': coin_data.get('description', {}).get('en', 'No description available'),
+            'twitter': coin_data.get('links', {}).get('twitter_screen_name'),
+            'facebook': coin_data.get('links', {}).get('facebook_username'),
+            'reddit': coin_data.get('links', {}).get('subreddit_url'),
+        }
+
+    def update_social_links(self):
+        social_info = self.get_coin_info()
+
+        # Clear previous widgets
+        for widget in self.social_frame.winfo_children():
+            widget.destroy()
+
+        icons = {
+            'twitter': self.x_icon,
+            'facebook': self.facebook_icon,
+            'reddit': self.reddit_icon
+        }
+
+        for i, (platform, username) in enumerate(social_info.items()):
+            if username and platform in icons:
+                link = f"https://{platform}.com/{username}" if platform != 'reddit' else username
+                btn = ctk.CTkButton(self.social_frame, text="", image=icons[platform],
+                                    command=lambda l=link: self.open_link(l),
+                                    width=30, height=30)
+                btn.grid(row=0, column=i, padx=5, pady=5)
+
+    def open_link(self, link):
+        import webbrowser
+        webbrowser.open(link)
+
+    def open_github(self, event):
+        import webbrowser
+        webbrowser.open(self.GITHUB_REPO_URL)
+
     def data_plot(self):
         x_list = []
         y_list = []
@@ -240,21 +404,18 @@ class MainWindow(ctk.CTk):
         ax = self.figure.add_subplot(111)
         x, y = self.data_plot()
 
-        # Налаштування графіка
         ax.plot(x, y, label=self.current_currency.capitalize(), color='#1E69A4')
         ax.fill_between(x, y, color='#00BFFF', alpha=0.1)
 
-        # Фон та кольори осей і значень
-        self.figure.patch.set_facecolor('#333333')  # Фон для всього графіка
-        ax.set_facecolor('#333333')  # Фон для області графіка
-        ax.spines['bottom'].set_color('#FFFFFF')  # Колір нижньої осі
-        ax.spines['left'].set_color('#FFFFFF')  # Колір лівої осі
-        ax.spines['top'].set_visible(False)  # Приховати верхню вісь
-        ax.spines['right'].set_visible(False)  # Приховати праву вісь
-        ax.tick_params(axis='x', colors='#FFFFFF')  # Колір значень на осі X
-        ax.tick_params(axis='y', colors='#FFFFFF')  # Колір значень на осі Y
+        self.figure.patch.set_facecolor('#333333')
+        ax.set_facecolor('#333333')
+        ax.spines['bottom'].set_color('#FFFFFF')
+        ax.spines['left'].set_color('#FFFFFF')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.tick_params(axis='x', colors='#FFFFFF')
+        ax.tick_params(axis='y', colors='#FFFFFF')
 
-        # Додавання курсорів для показу значень
         cursor = mplcursors.cursor(ax, hover=True)
         cursor.connect("add", lambda sel: self.configure_annotation(sel))
 
@@ -264,6 +425,10 @@ class MainWindow(ctk.CTk):
                                                                                                            'current_annotation') else None)
         ax.legend()
         self.canvas.draw()
+
+        if hasattr(self, 'highest_price') and hasattr(self, 'lowest_price'):
+            self.high_label.configure(text=f'${self.highest_price:,.2f}', text_color="#4CAF50")
+            self.low_label.configure(text=f'${self.lowest_price:,.2f}', text_color="#F44336")
 
         if len(y) > 1:
             percentage_diff = ((y[-1] - y[0]) / y[0]) * 100
@@ -280,13 +445,13 @@ class MainWindow(ctk.CTk):
             self.total_volume_label.configure(text=f'Total volume: ${self.total_volume:,.2f}')
 
     def configure_annotation(self, sel):
-        self.current_annotation = sel.annotation  # Зберігаємо поточну анотацію
+        self.current_annotation = sel.annotation
         self.current_annotation.set_text(
             f'Date: {mdates.num2date(sel.target[0]).strftime("%Y-%m-%d %H:%M:%S")}\nPrice: ${sel.target[1]:,.2f}')
-        self.current_annotation.set_backgroundcolor('#2B2B2B')  # Змінюємо колір фону анотації
-        self.current_annotation.set_color('#FFFFFF')  # Змінюємо колір тексту анотації
-        sel.annotation.draggable(True)  # Дозволяємо перетягування анотації
-        sel.annotation.set_visible(True)  # Робимо анотацію видимою
+        self.current_annotation.set_backgroundcolor('#2B2B2B')
+        self.current_annotation.set_color('#FFFFFF')
+        sel.annotation.draggable(True)
+        sel.annotation.set_visible(True)
 
     def remove_annotation(self):
         if hasattr(self, 'current_annotation'):
@@ -305,6 +470,14 @@ class MainWindow(ctk.CTk):
             '365': '1Y'
         }
         self.update_coin_info(time_period_map.get(timespan, timespan))
+
+        # Update High/Low values
+        self.after(0, self.update_high_low)
+
+    def update_high_low(self):
+        if hasattr(self, 'highest_price') and hasattr(self, 'lowest_price'):
+            self.high_label.configure(text=f'${self.highest_price:,.2f}', text_color="#4CAF50")
+            self.low_label.configure(text=f'${self.lowest_price:,.2f}', text_color="#F44336")
 
     def fetch_and_plot(self, timespan):
         loop = asyncio.new_event_loop()
