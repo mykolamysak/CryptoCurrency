@@ -1,5 +1,6 @@
 import requests
 import customtkinter as ctk
+from customtkinter import CTkSegmentedButton, set_appearance_mode
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from matplotlib import dates as mdates
@@ -16,14 +17,18 @@ class MainWindow(ctk.CTk):
         self.after(201, lambda: self.iconbitmap('src/icon.ico'))
         self.title('Crypto Currency')
         self.geometry('1000x600')
-
+        set_appearance_mode("dark")
         self.current_currency = 'bitcoin'
-
-        self.x_icon = ctk.CTkImage(Image.open("src/x.png"), size=(20, 20))
-        self.facebook_icon = ctk.CTkImage(Image.open("src/facebook.png"), size=(20, 20))
-        self.reddit_icon = ctk.CTkImage(Image.open("src/reddit.png"), size=(20, 20))
-
         self.init_main()
+        self.update_high_low_frame_color()
+
+        self.x_icon = ctk.CTkImage(Image.open("src/x.png"), size=(30, 30))
+        self.facebook_icon = ctk.CTkImage(Image.open("src/facebook.png"), size=(30, 30))
+        self.reddit_icon = ctk.CTkImage(Image.open("src/reddit.png"), size=(30, 30))
+
+        self.dark_icon = ctk.CTkImage(Image.open("src/dark.png"), size=(20, 20))
+        self.light_icon = ctk.CTkImage(Image.open("src/light.png"), size=(20, 20))
+
 
         # Update market info and plot data on startup
         self.update_global_market_info()
@@ -61,17 +66,21 @@ class MainWindow(ctk.CTk):
         coins_list_container.columnconfigure(0, weight=1)
         coins_list_container.rowconfigure(2, weight=1)
 
+        # Add theme switcher
+        self.theme_switcher = self.create_theme_switcher(coins_list_container)
+        self.theme_switcher.grid(row=3, column=0, padx=10, pady=(5, 10), sticky='ew')
+
         # Search
         search_frame = ctk.CTkFrame(coins_list_container)
-        search_frame.grid(row=0, column=0, pady=(5, 0), sticky='ew')
+        search_frame.grid(row=0, column=0, pady=(10, 5), padx=10, sticky='ew')
         search_frame.columnconfigure(0, weight=1)
 
-        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search coins...")
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search...")
         self.search_entry.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
         self.search_entry.bind('<KeyRelease>', self.filter_coins)
 
-        self.coins_list_frame = ctk.CTkScrollableFrame(coins_list_container)
-        self.coins_list_frame.grid(row=2, column=0, sticky='nsew')
+        self.coins_list_frame = ctk.CTkScrollableFrame(coins_list_container, width=180)
+        self.coins_list_frame.grid(row=2, column=0, padx=10, sticky='nsew')
         self.coins_list_frame.grid_columnconfigure((0, 1), weight=1, uniform="column")
 
         # Right side container (4/5 of the screen)
@@ -86,18 +95,18 @@ class MainWindow(ctk.CTk):
         coin_info_frame.columnconfigure(0, weight=1)
 
         # Single frame for all coin information
-        coin_info_row = ctk.CTkFrame(coin_info_frame, fg_color="#2B2B2B")
+        coin_info_row = ctk.CTkFrame(coin_info_frame, fg_color="transparent")
         coin_info_row.grid(row=0, column=0, pady=(5, 10), sticky='ew')
         coin_info_row.columnconfigure(0, weight=1)
 
         # Coin name, rank, volume, price and percantage(top row)
-        top_info_frame = ctk.CTkFrame(coin_info_row, fg_color="#2B2B2B")
+        top_info_frame = ctk.CTkFrame(coin_info_row, fg_color="transparent")
         top_info_frame.grid(row=0, column=0, sticky='ew')
         top_info_frame.columnconfigure(0, weight=1)
         top_info_frame.columnconfigure(1, weight=0)
 
         # Left side of top row (name, rank, volume)
-        name_rank_volume_frame = ctk.CTkFrame(top_info_frame, fg_color="#2B2B2B")
+        name_rank_volume_frame = ctk.CTkFrame(top_info_frame, fg_color="transparent")
         name_rank_volume_frame.grid(row=0, column=0, sticky='w')
         name_rank_volume_frame.columnconfigure(0, weight=1)
         name_rank_volume_frame.columnconfigure(1, weight=0)
@@ -105,7 +114,7 @@ class MainWindow(ctk.CTk):
         self.coin_name_label = ctk.CTkLabel(name_rank_volume_frame, text='ZXC', font=("Roboto", 24, "bold"))
         self.coin_name_label.grid(row=0, column=0, pady=(5, 5), padx=(10, 5), sticky='w')
 
-        self.coin_rank_label = ctk.CTkLabel(name_rank_volume_frame, text='#1', font=("Roboto", 16),
+        self.coin_rank_label = ctk.CTkLabel(name_rank_volume_frame, text='#N/A', font=("Roboto", 16),
                                             text_color="#808080")
         self.coin_rank_label.grid(row=0, column=1, pady=(7, 5), padx=(0, 10), sticky='e')
 
@@ -113,17 +122,17 @@ class MainWindow(ctk.CTk):
         self.total_volume_label.grid(row=1, column=0, columnspan=2, pady=(0, 5), padx=(10, 5), sticky='w')
 
         # Right side of top row (price and percentage)
-        price_percentage_frame = ctk.CTkFrame(top_info_frame, fg_color="#2B2B2B")
+        price_percentage_frame = ctk.CTkFrame(top_info_frame, fg_color="transparent")
         price_percentage_frame.grid(row=0, column=1, pady=(5, 5), sticky='e')
 
-        self.current_price_label = ctk.CTkLabel(price_percentage_frame, text='$64000', font=("Roboto", 20, "bold"))
+        self.current_price_label = ctk.CTkLabel(price_percentage_frame, text='$N/A', font=("Roboto", 20, "bold"))
         self.current_price_label.grid(row=0, column=0, pady=(5, 5), padx=(0, 5), sticky='e')
 
-        self.price_percentage_label = ctk.CTkLabel(price_percentage_frame, text='1.55%', font=("Roboto", 18))
+        self.price_percentage_label = ctk.CTkLabel(price_percentage_frame, text='N/A%', font=("Roboto", 18))
         self.price_percentage_label.grid(row=0, column=1, padx=(0, 10), sticky='e')
 
         # Frame for description and High/Low
-        description_high_low_frame = ctk.CTkFrame(coin_info_row, fg_color="#2B2B2B")
+        description_high_low_frame = ctk.CTkFrame(coin_info_row, fg_color="transparent")
         description_high_low_frame.grid(row=1, column=0, sticky='ew')
         description_high_low_frame.columnconfigure(0, weight=1)
         description_high_low_frame.columnconfigure(1, weight=0)
@@ -151,7 +160,7 @@ class MainWindow(ctk.CTk):
         self.low_label.grid(row=2, column=0, padx=10, pady=(0, 5))
 
         # Social Frame
-        self.social_frame = ctk.CTkFrame(coin_info_row, fg_color="#2B2B2B")
+        self.social_frame = ctk.CTkFrame(coin_info_row, fg_color="transparent")
         self.social_frame.grid(row=2, column=0, pady=5, padx=(5,0), sticky='w')
 
         # Graph plot area
@@ -190,38 +199,73 @@ class MainWindow(ctk.CTk):
         button_frame = ctk.CTkFrame(time_span_frame, fg_color="transparent")
         button_frame.grid(row=0, column=1, sticky='e', padx=(0, 113))
 
-        button_width = 50
-        button_height = 30
+        self.time_span_segmented_button = CTkSegmentedButton(
+            button_frame,
+            values=["24H", "7D", "30D", "90D", "1Y", "All"],
+            command=self.on_timespan_change
+        )
+        self.time_span_segmented_button.grid(row=0, column=0, sticky='e')
+        self.time_span_segmented_button.set("24H")
 
-        self.btn_timespan_24H = ctk.CTkButton(button_frame, text='24H', command=lambda: self.get_data_and_plot('1'),
-                                              width=button_width, height=button_height, corner_radius=0)
-        self.btn_timespan_24H.grid(row=0, column=0)
+    def create_theme_switcher(self, parent):
+        theme_switcher = CTkSegmentedButton(
+            parent,
+            values=["Dark", "Light"],
+            command=self.switch_theme,
+            fg_color="#2B2B2B",
+            selected_color="#1E69A4",
+            unselected_color="#2B2B2B"
+        )
+        theme_switcher.grid(row=3, column=0, pady=(5, 0), sticky='ew')
 
-        self.btn_timespan_7_days = ctk.CTkButton(button_frame, text='7D',
-                                                 command=lambda: self.get_data_and_plot('7'),
-                                                 width=button_width, height=button_height, corner_radius=0)
-        self.btn_timespan_7_days.grid(row=0, column=1)
+        # defaul dark theme
+        theme_switcher.set("Dark")
 
-        self.btn_timespan_30_days = ctk.CTkButton(button_frame, text='30D',
-                                                  command=lambda: self.get_data_and_plot('30'),
-                                                  width=button_width, height=button_height, corner_radius=0)
-        self.btn_timespan_30_days.grid(row=0, column=2)
+        return theme_switcher
 
-        self.btn_timespan_90_days = ctk.CTkButton(button_frame, text='90D',
-                                                  command=lambda: self.get_data_and_plot('90'),
-                                                  width=button_width, height=button_height, corner_radius=0)
-        self.btn_timespan_90_days.grid(row=0, column=3)
+    def update_colors(self):
+        self.configure(fg_color=self.cget("fg_color"))
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkBaseClass):
+                widget.configure(fg_color="transparent")
 
-        self.btn_timespan_1_year = ctk.CTkButton(button_frame, text='1Y',
-                                                 command=lambda: self.get_data_and_plot('365'),
-                                                 width=button_width, height=button_height, corner_radius=0)
-        self.btn_timespan_1_year.grid(row=0, column=4)
+        self.update_high_low_frame_color()
+        self.plot()  # Update the graph with new colors
 
-        self.btn_timespan_all_time = ctk.CTkButton(button_frame, text='All',
-                                                   command=lambda: self.get_data_and_plot('max'),
-                                                   width=button_width, height=button_height, corner_radius=0)
-        self.btn_timespan_all_time.grid(row=0, column=5)
+    def get_theme_colors(self):
+        if self._get_appearance_mode() == "dark":
+            return {
+                'background': '#333333',
+                'text': '#FFFFFF',
+                'line': '#1E69A4',
+                'fill': '#00BFFF'
+            }
+        else:
+            return {
+                'background': '#CFCFCF',
+                'text': '#000000',
+                'line': '#1E69A4',
+                'fill': '#E6F3FF'
+            }
 
+    def update_high_low_frame_color(self):
+        if self._get_appearance_mode() == "dark":
+            self.high_low_frame.configure(fg_color="#333333")
+            self.theme_switcher.configure(fg_color="#2B2B2B", unselected_color="#2B2B2B")
+            self.theme_switcher.configure(text_color="#FFFFFF")
+            self.high_low_title.configure(text_color="#FFFFFF")
+            self.time_span_segmented_button.configure(text_color="#FFFFFF")
+        else:
+            self.high_low_frame.configure(fg_color="#CFCFCF")
+            self.theme_switcher.configure(fg_color="#DBDBDB", unselected_color="#DBDBDB")
+            self.theme_switcher.configure(text_color="#000000")
+            self.high_low_title.configure(text_color="#000000")
+            self.time_span_segmented_button.configure(text_color="#000000")
+
+    def switch_theme(self, value):
+        set_appearance_mode(value)
+        self.update_colors()
+        self.update_high_low_frame_color()
     def filter_coins(self, event):
         search_term = self.search_entry.get().lower()
         for widget in self.coins_list_frame.winfo_children():
@@ -237,7 +281,7 @@ class MainWindow(ctk.CTk):
         column = index % 2
         row = index // 2
 
-        frame = ctk.CTkFrame(self.coins_list_frame)
+        frame = ctk.CTkFrame(self.coins_list_frame, width=170)
         frame.grid(row=row, column=column, pady=5, padx=5, sticky='nsew')
         frame.grid_columnconfigure(0, weight=1)
 
@@ -280,6 +324,10 @@ class MainWindow(ctk.CTk):
     def update_coin_info(self, time_period):
         self.coin_name_label.configure(text=f'{self.current_currency.capitalize()} ({time_period})')
 
+    def update_time_period(self, time_period):
+        self.selected_time_period = time_period
+        self.update_market_data()
+
     def set_currency(self, currency):
         self.current_currency = currency
         self.update_coin_info('24H')  # Default to 24H when changing currency
@@ -302,7 +350,7 @@ class MainWindow(ctk.CTk):
                 first_paragraph = first_paragraph[:347] + '...'
             self.brief_description_label.configure(text=first_paragraph)
         else:
-            self.brief_description_label.configure(text='No description available')
+            self.brief_description_label.configure(text='No description available.')
 
     def get_price(self):
         url = 'https://api.coingecko.com/api/v3/simple/price'
@@ -379,9 +427,20 @@ class MainWindow(ctk.CTk):
                 link = f"https://{platform}.com/{username}" if platform != 'reddit' else username
                 btn = ctk.CTkButton(self.social_frame, text="", image=icons[platform],
                                     command=lambda l=link: self.open_link(l),
-                                    width=30, height=30)
+                                    width=40, height=40, fg_color='transparent',
+                                    hover_color=self.cget("fg_color"))
                 btn.grid(row=0, column=i, padx=5, pady=5)
 
+    def on_timespan_change(self, value):
+        timespan_map = {
+            "24H": "1",
+            "7D": "7",
+            "30D": "30",
+            "90D": "90",
+            "1Y": "365",
+            "All": "max"
+        }
+        self.get_data_and_plot(timespan_map[value])
     def open_link(self, link):
         import webbrowser
         webbrowser.open(link)
@@ -404,17 +463,20 @@ class MainWindow(ctk.CTk):
         ax = self.figure.add_subplot(111)
         x, y = self.data_plot()
 
-        ax.plot(x, y, label=self.current_currency.capitalize(), color='#1E69A4')
-        ax.fill_between(x, y, color='#00BFFF', alpha=0.1)
+        colors = self.get_theme_colors()
 
-        self.figure.patch.set_facecolor('#333333')
-        ax.set_facecolor('#333333')
-        ax.spines['bottom'].set_color('#FFFFFF')
-        ax.spines['left'].set_color('#FFFFFF')
+        ax.plot(x, y, label=self.current_currency.capitalize(), color=colors['line'])
+        ax.fill_between(x, y, color=colors['fill'], alpha=0.1)
+
+        # Set the figure and axes background color
+        self.figure.patch.set_facecolor(colors['background'])
+        ax.set_facecolor(colors['background'])
+        ax.spines['bottom'].set_color(colors['text'])
+        ax.spines['left'].set_color(colors['text'])
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.tick_params(axis='x', colors='#FFFFFF')
-        ax.tick_params(axis='y', colors='#FFFFFF')
+        ax.tick_params(axis='x', colors=colors['text'])
+        ax.tick_params(axis='y', colors=colors['text'])
 
         cursor = mplcursors.cursor(ax, hover=True)
         cursor.connect("add", lambda sel: self.configure_annotation(sel))
@@ -423,8 +485,11 @@ class MainWindow(ctk.CTk):
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
         ax.figure.canvas.mpl_connect('axes_leave_event', lambda event: self.remove_annotation() if hasattr(self,
                                                                                                            'current_annotation') else None)
-        ax.legend()
+
+        ax.legend(facecolor=colors['background'], edgecolor=colors['text'], labelcolor=colors['text'])
+
         self.canvas.draw()
+
 
         if hasattr(self, 'highest_price') and hasattr(self, 'lowest_price'):
             self.high_label.configure(text=f'${self.highest_price:,.2f}', text_color="#4CAF50")
@@ -445,11 +510,12 @@ class MainWindow(ctk.CTk):
             self.total_volume_label.configure(text=f'Total volume: ${self.total_volume:,.2f}')
 
     def configure_annotation(self, sel):
+        colors = self.get_theme_colors()
         self.current_annotation = sel.annotation
         self.current_annotation.set_text(
             f'Date: {mdates.num2date(sel.target[0]).strftime("%Y-%m-%d %H:%M:%S")}\nPrice: ${sel.target[1]:,.2f}')
-        self.current_annotation.set_backgroundcolor('#2B2B2B')
-        self.current_annotation.set_color('#FFFFFF')
+        self.current_annotation.set_backgroundcolor(colors['background'])
+        self.current_annotation.set_color(colors['text'])
         sel.annotation.draggable(True)
         sel.annotation.set_visible(True)
 
@@ -467,12 +533,14 @@ class MainWindow(ctk.CTk):
             '7': '7D',
             '30': '30D',
             '90': '90D',
-            '365': '1Y'
+            '365': '1Y',
+            'max': 'All'
         }
         self.update_coin_info(time_period_map.get(timespan, timespan))
 
         # Update High/Low values
         self.after(0, self.update_high_low)
+
 
     def update_high_low(self):
         if hasattr(self, 'highest_price') and hasattr(self, 'lowest_price'):
@@ -490,8 +558,8 @@ class MainWindow(ctk.CTk):
             try:
                 await loop.run_in_executor(pool, self.get_data_plot, timespan)
                 self.after(0, self.plot)
-                self.after(0, self.update_volume_info)  # Add this line
-            except ValueError as e:
+                self.after(0, self.update_volume_info)
+            except Exception as e:  # Catch all exceptions
                 self.after(0, lambda: self.show_error_message(str(e)))
 
     def update_volume_info(self):
@@ -518,6 +586,8 @@ class MainWindow(ctk.CTk):
 
         for index, coin in enumerate(self.coins_data):
             self.create_coin_widget(coin, index)
+
+        self.coins_list_frame.update_idletasks()  # Force update of the frame
 
     def show_error_message(self, message="Server is overloaded. Try again later."):
         error_window = ctk.CTkToplevel(self)
