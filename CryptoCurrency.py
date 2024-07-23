@@ -1,4 +1,5 @@
 import requests
+import aiohttp
 import customtkinter as ctk
 from customtkinter import CTkSegmentedButton, set_appearance_mode
 from datetime import datetime
@@ -9,8 +10,10 @@ import mplcursors
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image
+import sys
 
-
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 class MainWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -26,18 +29,12 @@ class MainWindow(ctk.CTk):
         self.facebook_icon = ctk.CTkImage(Image.open("src/facebook.png"), size=(30, 30))
         self.reddit_icon = ctk.CTkImage(Image.open("src/reddit.png"), size=(30, 30))
 
-        self.dark_icon = ctk.CTkImage(Image.open("src/dark.png"), size=(20, 20))
-        self.light_icon = ctk.CTkImage(Image.open("src/light.png"), size=(20, 20))
-
-
         # Update market info and plot data on startup
         self.update_global_market_info()
         self.update_coin_list()
         self.update_price()
         self.update_social_links()
         self.update_brief_description()
-
-        GITHUB_REPO_URL = "https://github.com/#/#"
 
         # Use after method to ensure UI is fully initialized before plotting
         self.after(100, lambda: self.get_data_and_plot('1'))
@@ -188,7 +185,7 @@ class MainWindow(ctk.CTk):
         github_icon_label = ctk.CTkLabel(github_frame, image=self.github_icon, text="")
         github_icon_label.pack(side='left', padx=(0, 5))
 
-        github_text_label = ctk.CTkLabel(github_frame, text="GitHub", font=("Roboto", 12), cursor="hand2")
+        github_text_label = ctk.CTkLabel(github_frame, text="mykolamysak", font=("Roboto", 12), cursor="hand2")
         github_text_label.pack(side='left')
 
         # Clicable label
@@ -266,7 +263,7 @@ class MainWindow(ctk.CTk):
         set_appearance_mode(value)
         self.update_colors()
         self.update_high_low_frame_color()
-    def filter_coins(self, event):
+    async def filter_coins(self, event):
         search_term = self.search_entry.get().lower()
         for widget in self.coins_list_frame.winfo_children():
             widget.destroy()
@@ -447,7 +444,7 @@ class MainWindow(ctk.CTk):
 
     def open_github(self, event):
         import webbrowser
-        webbrowser.open(self.GITHUB_REPO_URL)
+        webbrowser.open("https://github.com/mykolamysak/CryptoCurrency")
 
     def data_plot(self):
         x_list = []
@@ -548,18 +545,16 @@ class MainWindow(ctk.CTk):
             self.low_label.configure(text=f'${self.lowest_price:,.2f}', text_color="#F44336")
 
     def fetch_and_plot(self, timespan):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._fetch_and_plot(timespan))
+        asyncio.run(self._fetch_and_plot(timespan))
 
     async def _fetch_and_plot(self, timespan):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as pool:
             try:
                 await loop.run_in_executor(pool, self.get_data_plot, timespan)
                 self.after(0, self.plot)
                 self.after(0, self.update_volume_info)
-            except Exception as e:  # Catch all exceptions
+            except Exception as e:
                 self.after(0, lambda: self.show_error_message(str(e)))
 
     def update_volume_info(self):
@@ -593,12 +588,21 @@ class MainWindow(ctk.CTk):
         error_window = ctk.CTkToplevel(self)
         error_window.title("Error")
         error_window.geometry("400x200")
-        self.center_window(error_window, 400, 200)
-        label = ctk.CTkLabel(error_window, text=message, wraplength=350, justify="center")
+        error_window.grab_set()  # Робить вікно модальним
+
+        label = ctk.CTkLabel(error_window, text=message, width=400, height=100, justify="center")
         label.pack(pady=20)
+
         close_button = ctk.CTkButton(error_window, text="Close", command=error_window.destroy)
         close_button.pack(pady=10)
 
+        # Центруємо вікно помилки
+        error_window.update_idletasks()
+        width = error_window.winfo_width()
+        height = error_window.winfo_height()
+        x = (error_window.winfo_screenwidth() // 2) - (width // 2)
+        y = (error_window.winfo_screenheight() // 2) - (height // 2)
+        error_window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
     def center_window(self, window, width, height):
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
