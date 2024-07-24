@@ -17,7 +17,7 @@ if sys.platform == 'win32':
 class MainWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.after(201, lambda: self.iconbitmap('src/icon.ico'))
+        self.after(201, lambda: self.iconbitmap('src/img/icon.ico'))
         self.title('Crypto Currency')
         self.geometry('1000x600')
         set_appearance_mode("dark")
@@ -25,9 +25,9 @@ class MainWindow(ctk.CTk):
         self.init_main()
         self.update_high_low_frame_color()
 
-        self.x_icon = ctk.CTkImage(Image.open("src/x.png"), size=(30, 30))
-        self.facebook_icon = ctk.CTkImage(Image.open("src/facebook.png"), size=(30, 30))
-        self.reddit_icon = ctk.CTkImage(Image.open("src/reddit.png"), size=(30, 30))
+        self.x_icon = ctk.CTkImage(Image.open("src/img/x.png"), size=(30, 30))
+        self.facebook_icon = ctk.CTkImage(Image.open("src/img/facebook.png"), size=(30, 30))
+        self.reddit_icon = ctk.CTkImage(Image.open("src/img/reddit.png"), size=(30, 30))
 
         # Update market info and plot data on startup
         self.update_global_market_info()
@@ -111,7 +111,7 @@ class MainWindow(ctk.CTk):
         self.coin_name_label = ctk.CTkLabel(name_rank_volume_frame, text='ZXC', font=("Roboto", 24, "bold"))
         self.coin_name_label.grid(row=0, column=0, pady=(5, 5), padx=(10, 5), sticky='w')
 
-        self.coin_rank_label = ctk.CTkLabel(name_rank_volume_frame, text='#N/A', font=("Roboto", 16),
+        self.coin_rank_label = ctk.CTkLabel(name_rank_volume_frame, text='#1', font=("Roboto", 16),
                                             text_color="#808080")
         self.coin_rank_label.grid(row=0, column=1, pady=(7, 5), padx=(0, 10), sticky='e')
 
@@ -171,7 +171,7 @@ class MainWindow(ctk.CTk):
         self.canvas.draw()
         self.canvas.get_tk_widget().grid(row=0, column=0, sticky='nsew')
 
-        self.github_icon = ctk.CTkImage(Image.open("src/github.png"), size=(20, 20))
+        self.github_icon = ctk.CTkImage(Image.open("src/img/github.png"), size=(20, 20))
 
         # Time span frame
         time_span_frame = ctk.CTkFrame(right_container, fg_color="transparent")
