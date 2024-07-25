@@ -36,7 +36,7 @@ class TestCryptoCurrencyAppAdditional(unittest.TestCase):
         self.app.facebook_icon = MagicMock()
 
         # Mock cget method
-        self.app.cget = MagicMock(return_value="#000000")  # or any other color
+        self.app.cget = MagicMock(return_value="#000000")
 
     @patch('main.requests.get')
     def test_get_price(self, mock_get):
@@ -80,8 +80,6 @@ class TestCryptoCurrencyAppAdditional(unittest.TestCase):
 
         # Check if CTkButton was called 3 times (for Twitter, Facebook, and Reddit)
         self.assertEqual(mock_button.call_count, 3)
-
-        # You can add more assertions here to check the exact calls to CTkButton if needed
 
 
 if __name__ == '__main__':

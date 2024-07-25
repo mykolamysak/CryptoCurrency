@@ -79,7 +79,7 @@ This project is distributed under the MIT License. See the `LICENSE` file for mo
 
 ### Other projects 🐾
 
-Watch my other projects on my [GitHub](https://github.com/mykolamysak?tab=repositories).
+Watch other projects on my [GitHub](https://github.com/mykolamysak?tab=repositories).
 
 ## Contributing ➿
 

@@ -1,5 +1,4 @@
 import requests
-import aiohttp
 import customtkinter as ctk
 from customtkinter import CTkSegmentedButton, set_appearance_mode
 from datetime import datetime
@@ -12,8 +11,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image
 import sys
 
+# Avoid compatibility issues with asynchronous code on Windows
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
 class MainWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -158,7 +160,7 @@ class MainWindow(ctk.CTk):
 
         # Social Frame
         self.social_frame = ctk.CTkFrame(coin_info_row, fg_color="transparent")
-        self.social_frame.grid(row=2, column=0, pady=5, padx=(5,0), sticky='w')
+        self.social_frame.grid(row=2, column=0, pady=5, padx=(5, 0), sticky='w')
 
         # Graph plot area
         graph_frame = ctk.CTkFrame(right_container)
@@ -204,6 +206,7 @@ class MainWindow(ctk.CTk):
         self.time_span_segmented_button.grid(row=0, column=0, sticky='e')
         self.time_span_segmented_button.set("24H")
 
+    # Theme switcher
     def create_theme_switcher(self, parent):
         theme_switcher = CTkSegmentedButton(
             parent,
@@ -215,11 +218,12 @@ class MainWindow(ctk.CTk):
         )
         theme_switcher.grid(row=3, column=0, pady=(5, 0), sticky='ew')
 
-        # defaul dark theme
+        # Default dark theme
         theme_switcher.set("Dark")
 
         return theme_switcher
 
+    # Update colors for some elements
     def update_colors(self):
         self.configure(fg_color=self.cget("fg_color"))
         for widget in self.winfo_children():
@@ -229,6 +233,7 @@ class MainWindow(ctk.CTk):
         self.update_high_low_frame_color()
         self.plot()  # Update the graph with new colors
 
+    # Theme colors
     def get_theme_colors(self):
         if self._get_appearance_mode() == "dark":
             return {
@@ -245,6 +250,7 @@ class MainWindow(ctk.CTk):
                 'fill': '#E6F3FF'
             }
 
+    # Update colors while changing theme
     def update_high_low_frame_color(self):
         if self._get_appearance_mode() == "dark":
             self.high_low_frame.configure(fg_color="#333333")
@@ -259,10 +265,13 @@ class MainWindow(ctk.CTk):
             self.high_low_title.configure(text_color="#000000")
             self.time_span_segmented_button.configure(text_color="#000000")
 
+    # Theme switching method
     def switch_theme(self, value):
         set_appearance_mode(value)
         self.update_colors()
         self.update_high_low_frame_color()
+
+    # Fiter coins based on input
     async def filter_coins(self, event):
         search_term = self.search_entry.get().lower()
         for widget in self.coins_list_frame.winfo_children():
@@ -274,6 +283,7 @@ class MainWindow(ctk.CTk):
         for index, coin in enumerate(filtered_coins):
             self.create_coin_widget(coin, index)
 
+    # Creates coins list widget
     def create_coin_widget(self, coin, index):
         column = index % 2
         row = index // 2
@@ -318,13 +328,16 @@ class MainWindow(ctk.CTk):
         else:
             change_label.configure(text_color="red")
 
+    # Updates coin info
     def update_coin_info(self, time_period):
         self.coin_name_label.configure(text=f'{self.current_currency.capitalize()} ({time_period})')
 
+    # Updates time period
     def update_time_period(self, time_period):
         self.selected_time_period = time_period
         self.update_market_data()
 
+    # Updates relevant information about the coins
     def set_currency(self, currency):
         self.current_currency = currency
         self.update_coin_info('24H')  # Default to 24H when changing currency
@@ -334,6 +347,7 @@ class MainWindow(ctk.CTk):
         self.update_brief_description()
         self.get_data_and_plot('1')  # Update graph with default timespan
 
+    # Updates brief description
     def update_brief_description(self):
         coin_info = self.get_coin_info()
         description = coin_info['description']
@@ -349,6 +363,7 @@ class MainWindow(ctk.CTk):
         else:
             self.brief_description_label.configure(text='No description available.')
 
+    # Gets the price from API response
     def get_price(self):
         url = 'https://api.coingecko.com/api/v3/simple/price'
         params = {'ids': self.current_currency, 'vs_currencies': 'usd'}
@@ -362,10 +377,12 @@ class MainWindow(ctk.CTk):
             print(f"Error: '{self.current_currency}' not found in API response")
         return price
 
+    # Updates price label text
     def update_price(self):
         price_today = self.get_price()
         self.current_price_label.configure(text='$' + price_today)
 
+    # Updates coin rank text
     def update_coin_rank(self):
         for coin in self.coins_data:
             if coin['id'] == self.current_currency:
@@ -373,6 +390,7 @@ class MainWindow(ctk.CTk):
                 self.coin_rank_label.configure(text=f'#{rank}')
                 break
 
+    # Gets data from API and puts it on the plot
     def get_data_plot(self, timespan):
         url = f'https://api.coingecko.com/api/v3/coins/{self.current_currency}/market_chart'
         params = {'vs_currency': 'usd', 'days': timespan}
@@ -395,6 +413,7 @@ class MainWindow(ctk.CTk):
         self.highest_price = max(prices)
         self.lowest_price = min(prices)
 
+    # Gets info about chosen coin
     def get_coin_info(self):
         url = f'https://api.coingecko.com/api/v3/coins/{self.current_currency}'
         response = requests.get(url)
@@ -406,6 +425,7 @@ class MainWindow(ctk.CTk):
             'reddit': coin_data.get('links', {}).get('subreddit_url'),
         }
 
+    # Formulates social links
     def update_social_links(self):
         social_info = self.get_coin_info()
 
@@ -428,6 +448,7 @@ class MainWindow(ctk.CTk):
                                     hover_color=self.cget("fg_color"))
                 btn.grid(row=0, column=i, padx=5, pady=5)
 
+    # Timespan map
     def on_timespan_change(self, value):
         timespan_map = {
             "24H": "1",
@@ -438,14 +459,18 @@ class MainWindow(ctk.CTk):
             "All": "max"
         }
         self.get_data_and_plot(timespan_map[value])
+
+    # Opens specified link
     def open_link(self, link):
         import webbrowser
         webbrowser.open(link)
 
+    # Opens gh link
     def open_github(self, event):
         import webbrowser
         webbrowser.open("https://github.com/mykolamysak/CryptoCurrency")
 
+    # Plots the data based on arrays got from API
     def data_plot(self):
         x_list = []
         y_list = []
@@ -455,6 +480,7 @@ class MainWindow(ctk.CTk):
                 y_list.append(item[1])
         return x_list, y_list
 
+    # Illustrates the graphic
     def plot(self):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
@@ -487,7 +513,6 @@ class MainWindow(ctk.CTk):
 
         self.canvas.draw()
 
-
         if hasattr(self, 'highest_price') and hasattr(self, 'lowest_price'):
             self.high_label.configure(text=f'${self.highest_price:,.2f}', text_color="#4CAF50")
             self.low_label.configure(text=f'${self.lowest_price:,.2f}', text_color="#F44336")
@@ -506,6 +531,7 @@ class MainWindow(ctk.CTk):
         if hasattr(self, 'total_volume'):
             self.total_volume_label.configure(text=f'Total volume: ${self.total_volume:,.2f}')
 
+    # Annotation settings
     def configure_annotation(self, sel):
         colors = self.get_theme_colors()
         self.current_annotation = sel.annotation
@@ -516,10 +542,12 @@ class MainWindow(ctk.CTk):
         sel.annotation.draggable(True)
         sel.annotation.set_visible(True)
 
+    # Removes annotation while mouse leaves
     def remove_annotation(self):
         if hasattr(self, 'current_annotation'):
             self.current_annotation.set_visible(False)
 
+    # Plots the data depended on specified time period
     def get_data_and_plot(self, timespan):
         loop = asyncio.get_event_loop()
         loop.run_in_executor(None, self.fetch_and_plot, timespan)
@@ -538,15 +566,17 @@ class MainWindow(ctk.CTk):
         # Update High/Low values
         self.after(0, self.update_high_low)
 
-
+    # Updates highest/lowest prices
     def update_high_low(self):
         if hasattr(self, 'highest_price') and hasattr(self, 'lowest_price'):
             self.high_label.configure(text=f'${self.highest_price:,.2f}', text_color="#4CAF50")
             self.low_label.configure(text=f'${self.lowest_price:,.2f}', text_color="#F44336")
 
+    # Executes async def in order to get data for graph plotting
     def fetch_and_plot(self, timespan):
         asyncio.run(self._fetch_and_plot(timespan))
 
+    # Gets the data and plots the graph
     async def _fetch_and_plot(self, timespan):
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as pool:
@@ -557,9 +587,12 @@ class MainWindow(ctk.CTk):
             except Exception as e:
                 self.after(0, lambda: self.show_error_message(str(e)))
 
+    # Updates volume info
     def update_volume_info(self):
         if hasattr(self, 'total_volume'):
             self.total_volume_label.configure(text=f'Total volume: ${self.total_volume:,.2f}')
+
+    # Gets global market info from API
     def update_global_market_info(self):
         url = 'https://api.coingecko.com/api/v3/global'
         response = requests.get(url)
@@ -570,6 +603,7 @@ class MainWindow(ctk.CTk):
             self.global_market_info_label.configure(text=f'Total market volume: ${total_volume:,.2f}')
             self.global_market_cap_label.configure(text=f'Global market cap: ${market_cap:,.2f}')
 
+    # Gets info about coins data to make a list
     def update_coin_list(self):
         url = 'https://api.coingecko.com/api/v3/coins/markets'
         params = {'vs_currency': 'usd', 'order': 'market_cap_desc', 'per_page': 100, 'page': 1}
@@ -584,11 +618,12 @@ class MainWindow(ctk.CTk):
 
         self.coins_list_frame.update_idletasks()  # Force update of the frame
 
+    # Shows error message, while API is overloaded
     def show_error_message(self, message="Server is overloaded. Try again later."):
         error_window = ctk.CTkToplevel(self)
         error_window.title("Error")
-        error_window.geometry("400x200")
-        error_window.grab_set()  # Робить вікно модальним
+        error_window.geometry("400x250")
+        error_window.grab_set()
 
         label = ctk.CTkLabel(error_window, text=message, width=400, height=100, justify="center")
         label.pack(pady=20)
@@ -596,13 +631,14 @@ class MainWindow(ctk.CTk):
         close_button = ctk.CTkButton(error_window, text="Close", command=error_window.destroy)
         close_button.pack(pady=10)
 
-        # Центруємо вікно помилки
         error_window.update_idletasks()
         width = error_window.winfo_width()
         height = error_window.winfo_height()
         x = (error_window.winfo_screenwidth() // 2) - (width // 2)
         y = (error_window.winfo_screenheight() // 2) - (height // 2)
         error_window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
+    # Centralizes the main window
     def center_window(self, window, width, height):
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
